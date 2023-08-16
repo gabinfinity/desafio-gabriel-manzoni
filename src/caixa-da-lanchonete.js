@@ -1,4 +1,5 @@
 import readline from "readline";
+
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout
@@ -22,40 +23,62 @@ class CaixaDaLanchonete {
     }
 
     let valorTotal = 0;
-    const carrinhoDaDB = []
+    const carrinhoDaDB = [];
 
     for (let i = 0; i < itens.length; i++) {
-      if (!itens[i].includes(',')) return "Item inválido!";
-      const item = itens[i].split(',')
-      carrinhoDaDB.push({
-        codigo: item[0],
-        quantidade: parseInt(item[1])
-      })
+      const item = this.validarItem(itens[i], carrinhoDaDB);
 
-      const codigo = item[0];
-      const quantidade = parseInt(item[1]);
-
-      if (isNaN(quantidade) || quantidade <= 0) {
-        return "Quantidade inválida!";
+      if (typeof item === "string") {
+        return item;
       }
 
-      if (!cardapio.hasOwnProperty(codigo)) {
-        return "Item inválido!";
-      }
-
-      if (codigo === "chantily" && !carrinhoDaDB.find(item => item.codigo === "cafe")) {
-        return "Item extra não pode ser pedido sem o principal";
-      }
-
-      if (codigo === "queijo" && !carrinhoDaDB.find(item => item.codigo === "sanduiche")) {
-        return "Item extra não pode ser pedido sem o principal";
-      }
-
+      const { codigo, quantidade } = item;
       const valorItem = cardapio[codigo].valor * quantidade;
 
       valorTotal += valorItem;
     }
 
+    const valorComDesconto = this.aplicarDesconto(valorTotal, metodoDePagamento);
+
+    if (typeof valorComDesconto == "string") return valorComDesconto
+
+    const valorFormatado = this.formatarValor(valorComDesconto)
+
+    return "R$ " + valorFormatado;
+  }
+
+  validarItem(item, carrinhoDaDB) {
+    if (!item.includes(',')) {
+      return "Item inválido!";
+    }
+
+    const [codigo, quantidade] = item.split(',');
+
+    if (isNaN(parseInt(quantidade)) || parseInt(quantidade) <= 0) {
+      return "Quantidade inválida!";
+    }
+
+    if (!cardapio.hasOwnProperty(codigo)) {
+      return "Item inválido!";
+    }
+
+    if (codigo === "chantily" && !carrinhoDaDB.find(item => item.codigo === "cafe")) {
+      return "Item extra não pode ser pedido sem o principal";
+    }
+
+    if (codigo === "queijo" && !carrinhoDaDB.find(item => item.codigo === "sanduiche")) {
+      return "Item extra não pode ser pedido sem o principal";
+    }
+
+    carrinhoDaDB.push({
+      codigo,
+      quantidade: parseInt(quantidade)
+    });
+
+    return { codigo, quantidade: parseInt(quantidade) };
+  }
+
+  aplicarDesconto(valorTotal, metodoDePagamento) {
     if (metodoDePagamento === "dinheiro") {
       valorTotal *= 0.95;
     } else if (metodoDePagamento === "credito") {
@@ -64,9 +87,12 @@ class CaixaDaLanchonete {
       return "Forma de pagamento inválida!";
     }
 
-    const valorFormatado = valorTotal.toFixed(2).replace(".", ",");
+    return valorTotal;
+  }
 
-    return "R$ " + valorFormatado;
+  formatarValor(valorTotal) {
+    
+      return valorTotal.toFixed(2).replace(".", ",");
   }
 }
 
@@ -79,7 +105,7 @@ function lerInput() {
     rl.question("Digite o código do item: ", (codigo) => {
       rl.question("Digite a quantidade: ", (quantidade) => {
         let item = `${codigo},${quantidade}`
-        itensArray.push( item );
+        itensArray.push(item);
 
         rl.question("Deseja adicionar mais algum item? (S/N): ", (resposta) => {
           if (resposta.toLowerCase() === "s") {
